@@ -1,0 +1,37 @@
+---
+- name: Check Oracle Listener Status on Multiple Hosts
+  hosts: oracle_hosts
+  gather_facts: false
+  become: true
+  become_user: oracle
+
+  tasks:
+
+    - name: Check Oracle Listener Status
+      shell: |
+        export ORACLE_HOME=/u01/app/oracle/product/19c/dbhome_1
+        export PATH=$ORACLE_HOME/bin:$PATH
+        lsnrctl status
+      register: listener_status
+      changed_when: false
+      failed_when: false
+
+    - name: Display Listener Status
+      debug:
+        msg: |
+          =====================================
+          Oracle Host: {{ inventory_hostname }}
+          =====================================
+          {% if listener_status.rc == 0 %}
+          Listener Status: RUNNING
+          {{ listener_status.stdout }}
+          {% else %}
+          Listener Status: NOT RUNNING / ERROR
+          {{ listener_status.stderr }}
+          {{ listener_status.stdout }}
+          {% endif %}
+
+    - name: Report Listener Failure
+      debug:
+        msg: "WARNING: Oracle Listener check failed on {{ inventory_hostname }}"
+      when: listener_status.rc != 0
